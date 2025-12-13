@@ -1,7 +1,7 @@
 import { Provider } from "@/provider/provider"
 import { Log } from "@/util/log"
 import { streamText, wrapLanguageModel, type ModelMessage, type StreamTextResult, type Tool, type ToolSet } from "ai"
-import { mergeDeep, pipe } from "remeda"
+import { mergeDeep, pipe, clone } from "remeda"
 import { ProviderTransform } from "@/provider/transform"
 import { Config } from "@/config/config"
 import { Instance } from "@/project/instance"
@@ -92,6 +92,19 @@ export namespace LLM {
     )
 
     const tools = await resolveTools(input)
+    const sessionMessages = clone(input.messages)
+
+    await Plugin.trigger("experimental.chat.messages.transform", {}, { messages: sessionMessages })
+
+    const messages = [
+      ...system.map(
+        (x): ModelMessage => ({
+          role: "system",
+          content: x,
+        }),
+      ),
+      ...input.messages,
+    ]
 
     return streamText({
       onError(error) {
@@ -138,15 +151,7 @@ export namespace LLM {
         ...input.model.headers,
       },
       maxRetries: input.retries ?? 0,
-      messages: [
-        ...system.map(
-          (x): ModelMessage => ({
-            role: "system",
-            content: x,
-          }),
-        ),
-        ...input.messages,
-      ],
+      messages,
       model: wrapLanguageModel({
         model: language,
         middleware: [
