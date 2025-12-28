@@ -48,6 +48,14 @@ export function Sidebar(props: { sessionID: string }) {
     }
   })
 
+  const sessionTokens = createMemo(() => {
+    const total = messages().reduce((sum, x) => {
+      if (x.role !== "assistant") return sum
+      return sum + x.tokens.input + x.tokens.output + x.tokens.reasoning + x.tokens.cache.read + x.tokens.cache.write
+    }, 0)
+    return total.toLocaleString()
+  })
+
   const keybind = useKeybind()
   const directory = useDirectory()
 
@@ -81,6 +89,12 @@ export function Sidebar(props: { sessionID: string }) {
               </text>
               <text fg={theme.textMuted}>{context()?.tokens ?? 0} tokens</text>
               <text fg={theme.textMuted}>{context()?.percentage ?? 0}% used</text>
+            </box>
+            <box>
+              <text fg={theme.text}>
+                <b>Session</b>
+              </text>
+              <text fg={theme.textMuted}>{sessionTokens()} total tokens</text>
               <text fg={theme.textMuted}>{cost()} spent</text>
             </box>
             <Show when={mcpEntries().length > 0}>
